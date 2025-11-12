@@ -1,3 +1,15 @@
+# GPUI Testing Patterns
+
+This document contains testing patterns and best practices for GPUI applications.
+
+## Source Attribution
+
+Examples in this document are derived from the [Zed editor](https://github.com/zed-industries/zed) codebase.
+
+- Examples marked with `(GPL-3.0)` are from GPL-licensed crates (e.g., `assistant2`, `repl`)
+- Examples marked with `(Apache-2.0)` are from Apache-licensed crates (e.g., `gpui`, `editor`, `workspace`)
+- Please respect the original licensing when using these patterns
+
 ## Testing
 
 ### Test Macros
@@ -9,6 +21,7 @@ There are two ways to write tests in gpui:
 Use `#[test]` for synchronous unit tests that don't require GPUI context:
 
 ```rust
+// Standard Rust test - no specific source
 #[test]
 fn test_basic_logic() {
     assert_eq!(2 + 2, 4);
@@ -20,6 +33,7 @@ fn test_basic_logic() {
 Use `#[gpui::test]` for tests requiring GPUI context and async operations:
 
 ```rust
+// Example pattern from various GPUI test files
 #[gpui::test]
 async fn test_entity_updates(cx: &mut gpui::TestAppContext) {
     let entity = cx.new(|_| MyEntity::default());
@@ -33,6 +47,7 @@ async fn test_entity_updates(cx: &mut gpui::TestAppContext) {
 **CRITICAL**: Never import `test` from gpui at module level. Always use fully qualified paths:
 
 ```rust
+// Best practice from GPUI test patterns
 // WRONG - Never do this:
 use gpui::test;
 

@@ -1,6 +1,14 @@
 # GPUI Task Examples
 
-This document contains diverse examples of task spawning and entity update patterns in GPUI, extracted from the Zed codebase.
+This document contains diverse examples of task spawning and entity update patterns in GPUI.
+
+## Source Attribution
+
+Examples in this document are derived from the [Zed editor](https://github.com/zed-industries/zed) codebase.
+
+- Examples marked with `(GPL-3.0)` are from GPL-licensed crates (e.g., `assistant2`, `repl`)
+- Examples marked with `(Apache-2.0)` are from Apache-licensed crates (e.g., `gpui`, `editor`, `workspace`)
+- Please respect the original licensing when using these patterns
 
 ## Table of Contents
 
@@ -18,7 +26,8 @@ This document contains diverse examples of task spawning and entity update patte
 ### Simple spawn from Context<T>
 
 ```rust
-// From acp_thread.rs - Basic entity update after async operation
+// Source: zed/crates/assistant2/src/acp_thread.rs (GPL-3.0)
+// Basic entity update after async operation
 cx.spawn(async move |this, cx| {
     let resolved_locations = task.await;
     this.update(cx, |this, cx| {
@@ -34,7 +43,8 @@ cx.spawn(async move |this, cx| {
 ### Spawn with WeakEntity handle
 
 ```rust
-// From acp_thread.rs - Using WeakEntity in spawn
+// Source: zed/crates/assistant2/src/acp_thread.rs (GPL-3.0)
+// Using WeakEntity in spawn
 cx.spawn(async move |handle, cx| {
     let new_checkpoint = new_checkpoint.await;
     handle.update(cx, |this, cx| {
@@ -46,7 +56,8 @@ cx.spawn(async move |handle, cx| {
 ### Spawn returning a value
 
 ```rust
-// From acp_thread.rs - Returning value from spawn
+// Source: zed/crates/assistant2/src/acp_thread.rs (GPL-3.0)
+// Returning value from spawn
 project.update(cx, |_, cx| {
     cx.spawn(async move |project, cx| {
         let mut new_locations = Vec::new();
@@ -61,7 +72,8 @@ project.update(cx, |_, cx| {
 ### Spawn with async move pattern (CORRECT)
 
 ```rust
-// From diff.rs - Correct async move syntax
+// Source: zed/crates/assistant2/src/diff.rs (GPL-3.0)
+// Correct async move syntax
 self.update_diff = cx.spawn(async move |diff, cx| {
     let text_snapshot = buffer.read_with(cx, |buffer, _| buffer.text_snapshot())?;
     let diff_snapshot = BufferDiff::update_diff(
@@ -84,7 +96,8 @@ self.update_diff = cx.spawn(async move |diff, cx| {
 ### Basic window.spawn
 
 ```rust
-// From thread_view.rs - Window spawn with entity update
+// Source: zed/crates/assistant2/src/thread_view.rs (GPL-3.0)
+// Window spawn with entity update
 window.spawn(cx, async move |cx| {
     let markdown_language = markdown_language_task.await?;
     // Work with the result
@@ -95,7 +108,8 @@ window.spawn(cx, async move |cx| {
 ### Window spawn with workspace operations
 
 ```rust
-// From editor.rs - Opening editor at anchor
+// Source: zed/crates/editor/src/editor.rs (Apache-2.0)
+// Opening editor at anchor
 window.spawn(cx, async move |cx| {
     let Some(editor) = item.await?.downcast::<Editor>() else {
         return Err(anyhow::anyhow!("Expected editor"));
@@ -110,7 +124,8 @@ window.spawn(cx, async move |cx| {
 ### Window spawn for deserialization
 
 ```rust
-// From items.rs - Deserializing editor state
+// Source: zed/crates/editor/src/items.rs (Apache-2.0)
+// Deserializing editor state
 window.spawn(cx, async move |cx| {
     let language_registry =
         project.read_with(cx, |project, _| project.languages().clone())?;
@@ -143,7 +158,8 @@ window.spawn(cx, async move |cx| {
 ### spawn_in with workspace update
 
 ```rust
-// From activity_indicator.rs - Creating buffer and updating UI
+// Source: zed/crates/activity_indicator/src/activity_indicator.rs (Apache-2.0)
+// Creating buffer and updating UI
 cx.spawn_in(window, async move |workspace, cx| {
     let buffer = create_buffer.await?;
     buffer.update(cx, |buffer, cx| {
@@ -174,7 +190,8 @@ cx.spawn_in(window, async move |workspace, cx| {
 ### spawn_in for async UI updates
 
 ```rust
-// From thread_view.rs - Authentication with UI feedback
+// Source: zed/crates/assistant2/src/thread_view.rs (GPL-3.0)
+// Authentication with UI feedback
 self.auth_task = Some(cx.spawn_in(window, {
     let agent = self.agent.clone();
     async move |this, cx| {
