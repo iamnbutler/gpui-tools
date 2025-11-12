@@ -1,0 +1,4 @@
+Docs:
+- docs/gpui_entities.md - entity creation, manipulation, and lifecycle patterns in gpui
+- docs/gpui_tasks.md - task spawning and async entity update patterns
+- docs/gpui_test - how to test in gpui, asyc testing, testing requiring cx
