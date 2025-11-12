@@ -1,6 +1,14 @@
 # GPUI Entity Patterns
 
-This document contains diverse examples of entity creation, manipulation, and lifecycle patterns in GPUI, extracted from the Zed codebase.
+This document contains diverse examples of entity creation, manipulation, and lifecycle patterns in GPUI. Original code, unless noted.
+
+## Source Attribution
+
+Some examples in this document are derived from the [Zed editor](https://github.com/zed-industries/zed) codebase.
+
+- Examples marked with `(GPL-3.0)` are from GPL-licensed crates (e.g., `assistant2`, `repl`)
+- Examples marked with `(Apache-2.0)` are from Apache-licensed crates (e.g., `gpui`, `editor`, `workspace`)
+- Please respect the original licensing when using these patterns
 
 ## Table of Contents
 
@@ -20,88 +28,55 @@ This document contains diverse examples of entity creation, manipulation, and li
 ### Basic entity creation with cx.new
 
 ```rust
-// From acp_thread.rs - Simple entity creation
-let content = cx.new(|cx| Markdown::new(entry.content.into(), None, None, cx));
-```
+struct Todo { label: SharedString, complete: bool }
+struct TodoList { items: Vec<Todo> }
 
-### Entity creation with complex initialization
-
-```rust
-// From diff.rs - Creating entity with multiple nested entities
-let multibuffer = cx.new(|_cx| MultiBuffer::without_headers(Capability::ReadOnly));
-let new_buffer = cx.new(|cx| Buffer::local(new_text, cx));
-
-let buffer_diff = cx.new(|cx| {
-    let mut diff = BufferDiff::new_unchanged(&buffer_text_snapshot, base_text_snapshot);
-    let snapshot = diff.snapshot(cx);
-    let secondary_diff = cx.new(|cx| {
-        let mut diff = BufferDiff::new(&buffer_text_snapshot, cx);
-        diff.set_snapshot(snapshot, &buffer_text_snapshot, cx);
-        diff
-    });
-    diff.set_secondary_diff(secondary_diff);
-    diff
-});
-```
-
-### Entity creation as part of struct initialization
-
-````rust
-// From terminal.rs - Entity creation in struct field
-Self {
-    id,
-    command: cx.new(|cx| {
-        Markdown::new(
-            format!("```\n{}\n```", command_label).into(),
-            Some(language_registry.clone()),
-            None,
-            cx,
-        )
-    }),
-    working_dir,
-    // other fields...
+impl TodoList {
+    // OR if you need a window: pub fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
+    pub fn new(cx: &mut Context<Self>) -> Self {
+        Self { items: vec![] }
+    }
 }
-````
+
+let todo_list = cx.new(|cx| TodoList::new(cx));
+```
 
 ## Entity Reading Patterns
 
 ### Simple read pattern
 
 ```rust
-// From acp_thread.rs - Basic entity read
-let source = self.label.read(cx).source();
+// where `list` is a method that lists all todos
+let todos = todo_list.read(cx).list();
 ```
 
 ### Read with nested entity access
 
 ```rust
-// From acp_thread.rs - Reading nested entities
-let buffer_id = channel_view.read(cx).channel_buffer.read(cx).remote_id(cx);
-```
+// where TodoList has a field `subscribed: Entity<SubscribedUsers>`
+let subscribed_users = todo_list.read(cx).subscribed.read(cx).list(cx);
 
-### Conditional read pattern
+// or - if using the read multiple times it might be useful to do this:
 
-```rust
-// From acp_thread.rs - Conditional entity read
-if let Some(last_entry) = self.entries.last_mut()
-    && let AgentThreadEntry::UserMessage(UserMessage { content, .. }) = last_entry
-{
-    let language_registry = self.project.read(cx).languages().clone();
-    // Use the read data...
-}
+let todo_list = todo_list.read(cx);
+let subscribed = todo_list.subscribed.read(cx);
+let subscribed_users = subscribed.list(cx);
 ```
 
 ### read_with for async contexts
 
 ```rust
-// From acp_thread.rs - Using read_with from async context
+// Source: zed/crates/assistant2/src/acp_thread.rs (GPL-3.0)
+// Using read_with from async context
 let snapshot = buffer.read_with(cx, |buffer, _| buffer.text_snapshot())?;
 ```
 
 ### read_with with complex logic
 
 ```rust
-// From acp_thread.rs - Complex read_with usage
+// Source: zed/crates/assistant2/src/acp_thread.rs (GPL-3.0)
+// Complex read_with operation
+let tool_call_results = self.acp_thread.read_with(cx, |this, cx| {
 thread.read_with(cx, |thread, cx| {
     let term = thread.terminal(terminal_id.clone()).unwrap();
     term.read_with(cx, |t, cx| t.inner().read(cx).get_content())
@@ -111,7 +86,9 @@ thread.read_with(cx, |thread, cx| {
 ### Read for extracting multiple values
 
 ```rust
-// From action_log.rs - Reading multiple values from entity
+// Source: zed/crates/assistant2/src/action_log.rs (GPL-3.0)
+// Reading multiple fields from entity
+let operation = action_log.read_with(&cx, |this, cx| {
 let (diff, language, language_registry) = this.read_with(cx, |this, cx| {
     let tracked_buffer = this
         .tracked_buffers
@@ -130,7 +107,9 @@ let (diff, language, language_registry) = this.read_with(cx, |this, cx| {
 ### Simple update pattern
 
 ```rust
-// From acp_thread.rs - Basic entity update
+// Source: zed/crates/assistant2/src/acp_thread.rs (GPL-3.0)
+// Basic update
+self.next_entry.update(cx, |next_entry, cx| {
 self.label.update(cx, |label, cx| {
     if let Some((first_line, _)) = title.split_once("\n") {
         label.replace(first_line.to_owned() + "…", cx)
@@ -143,7 +122,9 @@ self.label.update(cx, |label, cx| {
 ### Update with return value
 
 ```rust
-// From acp_thread.rs - Update returning a value
+// Source: zed/crates/assistant2/src/acp_thread.rs (GPL-3.0)
+// Update that returns a value
+let completion_task = self.update(cx, |this, cx| {
 let buffer = project.update(cx, |project, cx| {
     project
         .project_path_for_absolute_path(&location.path, cx)
@@ -155,7 +136,9 @@ let buffer = project.update(cx, |project, cx| {
 ### Nested entity updates
 
 ```rust
-// From acp_thread.rs - Updating nested entities
+// Source: zed/crates/assistant2/src/action_log.rs (GPL-3.0)
+// Updating nested entities
+self.buffer.update(cx, |buffer, cx| {
 entity.update(cx, |term, cx| {
     term.inner().update(cx, |inner, cx| {
         inner.write_output(&data, cx);
@@ -205,7 +188,8 @@ cx.spawn(async move |this, cx| {
 ### Basic WeakEntity creation
 
 ```rust
-// From agent.rs - Creating WeakEntity with downgrade
+// Source: zed/crates/assistant2/src/agent.rs (GPL-3.0)
+// Creating WeakEntity with downgrade
 struct Session {
     thread: Entity<Thread>,
     acp_thread: WeakEntity<acp_thread::AcpThread>,
@@ -219,7 +203,8 @@ acp_thread: acp_thread.downgrade(),
 ### WeakEntity in async functions
 
 ```rust
-// From action_log.rs - WeakEntity as function parameter
+// Source: zed/crates/assistant2/src/action_log.rs (GPL-3.0)
+// WeakEntity as function parameter
 async fn maintain_diff(
     this: WeakEntity<Self>,
     buffer: Entity<Buffer>,
@@ -233,7 +218,8 @@ async fn maintain_diff(
 ### WeakEntity update pattern
 
 ```rust
-// From thread.rs - Updating through WeakEntity
+// Source: zed/crates/assistant2/src/thread.rs (GPL-3.0)
+// Updating through WeakEntity
 async fn run_turn_internal(
     this: &WeakEntity<Self>,
     model: Arc<dyn LanguageModel>,
@@ -250,7 +236,8 @@ async fn run_turn_internal(
 ### WeakEntity in struct fields
 
 ```rust
-// From edit_file_tool.rs - Storing WeakEntity for lifecycle safety
+// Source: zed/crates/assistant2/src/tools/edit_file_tool.rs (GPL-3.0)
+// Storing WeakEntity for lifecycle safety
 pub struct EditFileTool {
     thread: WeakEntity<Thread>,
     language_registry: Arc<LanguageRegistry>,
@@ -262,7 +249,8 @@ pub struct EditFileTool {
 ### WeakEntity with AgentLocation pattern
 
 ```rust
-// From edit_agent.rs - Creating location with WeakEntity buffer
+// Source: zed/crates/assistant2/src/edit_agent.rs (GPL-3.0)
+// Creating location with WeakEntity buffer
 Some(AgentLocation {
     buffer: buffer.downgrade(),
     position: buffer.read_with(cx, |buffer, _| buffer.anchor_before(Point::new(0, 3)))
@@ -274,7 +262,8 @@ Some(AgentLocation {
 ### Basic subscription pattern
 
 ```rust
-// From acp_thread.rs - Simple subscription
+// Source: zed/crates/assistant2/src/acp_thread.rs (GPL-3.0)
+// Simple subscription
 cx.subscribe(&thread, move |_thread, _event_thread, event: &AcpThreadEvent, _cx| {
     if matches!(event, AcpThreadEvent::Refusal) {
         *saw_refusal_event_captured.lock().unwrap() = true;
@@ -286,14 +275,16 @@ cx.subscribe(&thread, move |_thread, _event_thread, event: &AcpThreadEvent, _cx|
 ### Subscription with entity update
 
 ```rust
-// From action_log.rs - Subscription that updates entity
+// Source: zed/crates/assistant2/src/action_log.rs (GPL-3.0)
+// Subscription that updates entity
 _subscription: cx.subscribe(&buffer, Self::handle_buffer_event),
 ```
 
 ### Multiple subscriptions pattern
 
 ```rust
-// From agent.rs - Managing multiple subscriptions
+// Source: zed/crates/assistant2/src/agent.rs (GPL-3.0)
+// Managing multiple subscriptions
 let subscriptions = vec![
     cx.observe_release(&acp_thread, |this, acp_thread, _cx| {
         this.sessions.remove(acp_thread.session_id());
@@ -309,7 +300,8 @@ let subscriptions = vec![
 ### Subscription with closure capture
 
 ```rust
-// From agent_ui.rs - Subscription with captured state
+// Source: zed/crates/assistant2/src/agent_panel.rs (GPL-3.0)
+// Subscription capturing entities
 cx.subscribe(
     &LanguageModelRegistry::global(cx),
     |_, event: &language_model::Event, cx| match event {
@@ -350,7 +342,8 @@ let subscription = cx.observe(&connection_registry, |this, _, cx| {
 ### observe_release pattern
 
 ```rust
-// From agent.rs - Cleanup on entity release
+// Source: zed/crates/assistant2/src/agent.rs (GPL-3.0)
+// Release observation
 cx.observe_release(&acp_thread, |this, acp_thread, _cx| {
     this.sessions.remove(acp_thread.session_id());
 }),
@@ -378,7 +371,8 @@ cx.observe_global_in::<SettingsStore>(window, Self::settings_changed),
 ### Entity with subscription cleanup
 
 ```rust
-// From agent_panel.rs - Entity with _subscriptions field
+// Source: zed/crates/assistant2/src/agent_panel.rs (GPL-3.0)
+// Managing subscriptions lifecycle
 struct AgentPanel {
     _subscriptions: Vec<Subscription>,
     // other fields...
@@ -402,7 +396,8 @@ impl AgentPanel {
 ### Task::ready for immediate entity operations
 
 ```rust
-// From acp_thread.rs - Immediate entity task
+// Source: zed/crates/assistant2/src/acp_thread.rs (GPL-3.0)
+// Immediate entity task
 pub fn cancel(&mut self, cx: &mut Context<Self>) -> Task<()> {
     let Some(send_task) = self.send_task.take() else {
         return Task::ready(());
@@ -414,7 +409,8 @@ pub fn cancel(&mut self, cx: &mut Context<Self>) -> Task<()> {
 ### Entity creation guard pattern
 
 ```rust
-// From thread_view.rs - Guard entity for lifecycle management
+// Source: zed/crates/assistant2/src/thread_view.rs (GPL-3.0)
+// Guard entity for lifecycle management
 let guard = cx.new(|_| ());
 cx.observe_release(&guard, |this, _guard, cx| {
     this.is_loading_contents = false;
@@ -428,7 +424,8 @@ cx.observe_release(&guard, |this, _guard, cx| {
 ### Basic EventEmitter implementation
 
 ```rust
-// From acp_thread.rs - Simple event emitter
+// Source: zed/crates/assistant2/src/acp_thread.rs (GPL-3.0)
+// Simple event emitter
 impl EventEmitter<AcpThreadEvent> for AcpThread {}
 
 #[derive(Debug, Clone)]
@@ -442,7 +439,8 @@ pub enum AcpThreadEvent {
 ### Emitting events
 
 ```rust
-// From acp_thread.rs - Emitting various events
+// Source: zed/crates/assistant2/src/acp_thread.rs (GPL-3.0)
+// Emitting various events
 cx.emit(AcpThreadEvent::TitleUpdated);
 cx.emit(AcpThreadEvent::EntryUpdated(idx));
 cx.emit(AcpThreadEvent::StreamedCompletion);
@@ -451,7 +449,8 @@ cx.emit(AcpThreadEvent::StreamedCompletion);
 ### Multiple event types for single entity
 
 ```rust
-// From thread.rs - Multiple EventEmitter implementations
+// Source: zed/crates/assistant2/src/thread.rs (GPL-3.0)
+// Multiple EventEmitter implementations
 pub struct TokenUsageUpdated(pub Option<acp_thread::TokenUsage>);
 impl EventEmitter<TokenUsageUpdated> for Thread {}
 
@@ -462,7 +461,8 @@ impl EventEmitter<TitleUpdated> for Thread {}
 ### Event with payload
 
 ```rust
-// From entry_view_state.rs - Event with data
+// Source: zed/crates/assistant2/src/entry_view_state.rs (GPL-3.0)
+// Event with data
 pub struct EntryViewEvent {
     pub entry_index: usize,
     pub event: EditorEvent,
@@ -476,7 +476,8 @@ impl EventEmitter<EntryViewEvent> for EntryViewState {}
 ### Passing entity to functions
 
 ```rust
-// From acp_thread.rs - Entity as parameter
+// Source: zed/crates/assistant2/src/acp_thread.rs (GPL-3.0)
+// Entity as parameter
 pub fn open(
     channel_id: ChannelId,
     workspace: &Entity<Workspace>,
@@ -490,7 +491,8 @@ pub fn open(
 ### Cloning entities for async operations
 
 ```rust
-// From acp_thread.rs - Cloning for async
+// Source: zed/crates/assistant2/src/acp_thread.rs (GPL-3.0)
+// Cloning for async
 let project = self.project.clone();
 let action_log = self.action_log.clone();
 cx.spawn(async move |this, cx| {
@@ -504,7 +506,8 @@ cx.spawn(async move |this, cx| {
 ### Entity in return types
 
 ```rust
-// From diff.rs - Returning new entity
+// Source: zed/crates/assistant2/src/diff.rs (GPL-3.0)
+// Returning new entity
 pub fn new(buffer: Entity<Buffer>, cx: &mut Context<Self>) -> Self {
     let buffer_diff = cx.new(|cx| {
         // Create and return new entity
@@ -520,10 +523,11 @@ pub fn new(buffer: Entity<Buffer>, cx: &mut Context<Self>) -> Self {
 ### Storing entities in collections
 
 ```rust
-// From acp_thread.rs - HashMap of entities
+// Source: zed/crates/assistant2/src/acp_thread.rs (GPL-3.0)
+// Entity collections
 struct AcpThread {
-    terminals: HashMap<acp::TerminalId, Entity<Terminal>>,
-    shared_buffers: HashMap<Entity<Buffer>, BufferSnapshot>,
+    terminals: HashMap<TerminalId, Entity<Terminal>>,
+    shared_buffers: HashMap<BufferId, Entity<Buffer>>,
     // other fields...
 }
 ```
@@ -533,7 +537,8 @@ struct AcpThread {
 ### Entity with async initialization
 
 ```rust
-// From channel_view.rs - Complex async entity loading
+// Source: zed/crates/assistant2/src/channel_view.rs (GPL-3.0)
+// Complex async entity loading
 pub fn load(
     channel_id: ChannelId,
     workspace: &Entity<Workspace>,
@@ -564,7 +569,8 @@ pub fn load(
 ### Entity factory pattern
 
 ```rust
-// From agent.rs - Factory with environment injection
+// Source: zed/crates/assistant2/src/agent.rs (GPL-3.0)
+// Factory with environment injection
 let thread_handle = cx.new(|cx| {
     Thread::new(
         id.clone(),
@@ -581,7 +587,8 @@ let thread_handle = cx.new(|cx| {
 ### Cross-entity communication pattern
 
 ```rust
-// From acp_tools.rs - Entity communication via channels
+// Source: zed/crates/assistant2/src/acp_tools.rs (GPL-3.0)
+// Entity communication via channels
 let mut receiver = connection.subscribe();
 let task = cx.spawn(async move |this, cx| {
     while let Ok(message) = receiver.recv().await {
@@ -596,7 +603,8 @@ let task = cx.spawn(async move |this, cx| {
 ### Entity delegation pattern
 
 ```rust
-// From agent_configuration.rs - Delegating to context server store
+// Source: zed/crates/assistant2/src/agent_configuration.rs (GPL-3.0)
+// Delegating to context server store
 cx.subscribe(&context_server_store, |_, _, _, cx| cx.notify())
     .detach();
 
@@ -609,7 +617,8 @@ context_server_store.update(cx, |store, cx| {
 ### Entity state machine pattern
 
 ```rust
-// From diff.rs - Entity with state transitions
+// Source: zed/crates/assistant2/src/diff.rs (GPL-3.0)
+// Entity with state transitions
 enum Diff {
     Pending(PendingDiff),
     Finalized(FinalizedDiff),
@@ -631,7 +640,8 @@ impl Diff {
 ### Entity registry pattern
 
 ```rust
-// From context_server_registry.rs - Registry managing entities
+// Source: zed/crates/assistant2/src/context_server_registry.rs (GPL-3.0)
+// Registry managing entities
 struct ContextServerRegistry {
     server_store: Entity<ContextServerStore>,
     registered_servers: HashMap<ContextServerId, RegisteredServer>,
