@@ -183,6 +183,14 @@ cx.simulate_event(MouseMoveEvent { position, ... });
 cx.simulate_event(ScrollWheelEvent { delta, ... });
 ```
 
+There are a number of `simulate_` methods:
+
+- `cx.simulate_input()` - Simulates text input events
+- `cx.simulate_keystrokes()` - Simulates keyboard keystrokes
+- `cx.simulate_new_path_selection()` - Simulates file path selection dialog
+- `cx.simulate_prompt_answer()` - Simulates user response to prompts
+- `cx.simulate_window_resize()` - Simulates window resize events
+
 #### Testing with Multiple Windows
 
 ```rust
