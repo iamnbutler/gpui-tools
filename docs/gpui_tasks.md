@@ -1,12 +1,4 @@
-# GPUI Task Examples
-
-This document contains diverse examples of task spawning and entity update patterns in GPUI.
-
-## Source Attribution
-
-All examples in this document are original implementations using a canonical "TodoList" application for demonstration purposes. The patterns shown are based on common GPUI usage patterns and best practices.
-
-## Table of Contents
+# GPUI Task Patterns
 
 1. [Basic Spawn Patterns](#basic-spawn-patterns)
 2. [Window Spawn Patterns](#window-spawn-patterns)

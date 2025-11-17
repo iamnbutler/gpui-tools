@@ -1,20 +1,16 @@
 # GPUI Entity Patterns
 
-This document contains diverse examples of entity creation, manipulation, and lifecycle patterns in GPUI. Non-original examples noted.
-
-## Contents
-
-1. High Level Patterns
-2. Entity Creation Patterns
-3. Entity Reading Patterns
-4. Entity Updating Patterns
-5. WeakEntity Patterns
-6. Entity Subscriptions
-7. Entity Observations
-8. Entity Lifecycle
-9. EventEmitter Patterns
-10. Entity Passing Patterns
-11. Complex Entity Patterns
+1. [High Level Patterns](#high-level-patterns)
+2. [Entity Creation Patterns](#entity-creation-patterns)
+3. [Entity Reading Patterns](#entity-reading-patterns)
+4. [Entity Updating Patterns](#entity-updating-patterns)
+5. [WeakEntity Patterns](#weakentity-patterns)
+6. [Entity Subscriptions](#entity-subscriptions)
+7. [Entity Observations](#entity-observations)
+8. [Entity Lifecycle](#entity-lifecycle)
+9. [EventEmitter Patterns](#eventemitter-patterns)
+10. [Entity Passing Patterns](#entity-passing-patterns)
+11. [Complex Entity Patterns](#complex-entity-patterns)
 
 ## High Level Patterns
 
