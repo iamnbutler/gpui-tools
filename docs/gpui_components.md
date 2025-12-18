@@ -1,5 +1,9 @@
 # GPUI Component Design Patterns
 
+This guide covers the details of creating UI components in GPUI—the `Render` and `RenderOnce` traits, the builder pattern, and composition. For guidance on when to use each type and how they fit into an app, see [GPUI App Architecture](gpui_app_architecture.md).
+
+## Table of Contents
+
 1. [High Level Patterns](#high-level-patterns)
 2. [Render vs RenderOnce](#render-vs-renderonce)
 3. [Render Trait](#render-trait)

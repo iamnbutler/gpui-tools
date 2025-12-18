@@ -1,5 +1,9 @@
 # GPUI Entity Patterns
 
+This guide covers the details of working with entities in GPUI—creation, reading, updating, subscriptions, and lifecycle management. For guidance on how entities fit into an app's architecture, see [GPUI App Architecture](gpui_app_architecture.md).
+
+## Table of Contents
+
 1. [High Level Patterns](#high-level-patterns)
 2. [Entity Creation Patterns](#entity-creation-patterns)
 3. [Entity Reading Patterns](#entity-reading-patterns)
